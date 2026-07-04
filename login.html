@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="id">
 <head>
     <meta charset="UTF-8">
@@ -210,7 +210,7 @@
             // Simpan sementara isAdminContext supaya Store tahu ini admin login
             // Kita manggil API langsung tanpa Store.apiLogin karena context-nya customer page
             try {
-                const res = await fetch('http://localhost:3000/api/auth/login', {
+                const res = await fetch('https://web-production-8184a.up.railway.app/api/auth/login', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ email, password })

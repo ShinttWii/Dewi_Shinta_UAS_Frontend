@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="id">
 <head>
     <meta charset="UTF-8">
@@ -294,7 +294,7 @@ async function guardAdmin() {
     const token = Store.getToken();
     if (token && token !== 'local-admin-token') {
         try {
-            const res = await fetch('http://localhost:3000/api/auth/profile', { headers: { Authorization: `Bearer ${token}` } });
+            const res = await fetch('https://web-production-8184a.up.railway.app/api/auth/profile', { headers: { Authorization: `Bearer ${token}` } });
             if (!res.ok) { localStorage.removeItem('admin_session'); localStorage.removeItem('admin_token'); window.location.href = '../login.html'; return false; }
         } catch(e) { console.warn('Offline mode'); }
     }
@@ -568,7 +568,7 @@ window.updateOrderStatus = async (orderId, status) => {
 
 // ===== USERS =====
 window.loadUsers = async () => {
-    const res = await fetch('http://localhost:3000/api/users', { headers: { Authorization: `Bearer ${Store.getToken()}` } }).then(r => r.json()).catch(() => ({ success: false }));
+    const res = await fetch('https://web-production-8184a.up.railway.app/api/users', { headers: { Authorization: `Bearer ${Store.getToken()}` } }).then(r => r.json()).catch(() => ({ success: false }));
     const tbody = document.getElementById('users-table-body');
     const mobileCards = document.getElementById('users-mobile-cards');
     if (res.success && res.data) {
@@ -599,7 +599,7 @@ window.loadUsers = async () => {
 };
 window.deleteUser = async (id) => {
     if (!confirm('Hapus user?')) return;
-    const res = await fetch(`http://localhost:3000/api/users/${id}`, { method:'DELETE', headers:{ Authorization:`Bearer ${Store.getToken()}` } }).then(r => r.json()).catch(() => ({ success:false }));
+    const res = await fetch(`https://web-production-8184a.up.railway.app/api/users/${id}`, { method:'DELETE', headers:{ Authorization:`Bearer ${Store.getToken()}` } }).then(r => r.json()).catch(() => ({ success:false }));
     if (res.success) { showToast('🗑️ User dihapus'); loadUsers(); } else showToast('Gagal hapus user');
 };
 

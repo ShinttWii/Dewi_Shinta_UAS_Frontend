@@ -3,7 +3,7 @@
 // Author: Dewi Shinta
 // ============================================================
 
-export const BASE_URL = 'http://localhost:3000/api';
+export const BASE_URL = 'https://web-production-8184a.up.railway.app/api';
 
 // ============================================================
 // STORAGE HELPER
