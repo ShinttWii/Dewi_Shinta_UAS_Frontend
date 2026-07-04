@@ -72,6 +72,29 @@
             window.location.href = 'login.html?redirect=history.html';
         }
 
+        // Sync status order dari API ke localStorage tanpa ubah struktur data lokal
+        async function syncStatusFromAPI() {
+            try {
+                const apiRes = await Store.apiGetMyOrders();
+                if (!apiRes.ok || !apiRes.data.data) return;
+                const apiOrders = apiRes.data.data;
+                const allOrders = Store.getOrders();
+                let updated = false;
+                allOrders.forEach(o => {
+                    const match = apiOrders.find(a =>
+                        a.order_id === o.orderId ||
+                        a.order_id === o.order_id ||
+                        String(a.order_id) === String(o.orderId)
+                    );
+                    if (match && match.status && match.status !== o.status) {
+                        o.status = match.status;
+                        updated = true;
+                    }
+                });
+                if (updated) Store.saveOrders(allOrders);
+            } catch(e) { /* silent fail */ }
+        }
+
         function renderHistory() {
             const container = document.getElementById('order-history-list');
             const query = document.getElementById('search-history').value.toLowerCase();
@@ -103,7 +126,19 @@
                             <span class="text-[8px] md:text-[10px] font-black bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-300 px-2 py-0.5 rounded tracking-tighter">#${(o.orderId || o.id).toString().slice(-8)}</span>
                             <p class="text-[9px] opacity-50 mt-1 font-medium">${o.date}</p>
                         </div>
-                        <span class="text-[8px] md:text-[10px] font-black text-emerald-500 bg-emerald-50 dark:bg-emerald-900/20 px-2 py-0.5 rounded-full uppercase">Selesai</span>
+                        <span class="text-[8px] md:text-[10px] font-black px-2 py-0.5 rounded-full uppercase ${
+                            o.status === 'pending'    ? 'bg-yellow-50 text-yellow-600 dark:bg-yellow-900/20' :
+                            o.status === 'processing' ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/20' :
+                            o.status === 'shipped'    ? 'bg-indigo-50 text-indigo-600 dark:bg-indigo-900/20' :
+                            o.status === 'cancelled'  ? 'bg-red-50 text-red-500 dark:bg-red-900/20' :
+                            'bg-emerald-50 text-emerald-500 dark:bg-emerald-900/20'
+                        }">${
+                            o.status === 'pending'    ? 'Menunggu' :
+                            o.status === 'processing' ? 'Diproses' :
+                            o.status === 'shipped'    ? 'Dikirim' :
+                            o.status === 'cancelled'  ? 'Dibatalkan' :
+                            'Selesai'
+                        }</span>
                     </div>
 
                     <div class="space-y-2">
@@ -175,7 +210,8 @@
 
         document.getElementById('search-history').addEventListener('input', renderHistory);
         window.logout = Store.logout;
-        renderHistory();
+        // Sync status dari API dulu, baru render
+        syncStatusFromAPI().then(() => renderHistory());
     </script>
 
     <div id="footer-placeholder"></div>
