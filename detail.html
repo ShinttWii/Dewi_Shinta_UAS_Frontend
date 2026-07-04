@@ -135,8 +135,8 @@
         window.handleWishDetail = async () => {
             const all = await Store.getProducts();
             const p = all.find(x => x.id === productId);
-            const res = Store.toggleWishlist(p);
-            showToast(res.action === 'added' ? "❤️ Tersimpan!" : "💔 Dihapus");
+            const res = await Store.toggleWishlist(p);
+            showToast(res.action === 'added' ? "❤️ Tersimpan!" : "💔 Dihapus dari Wishlist");
             renderDetail();
         };
 
