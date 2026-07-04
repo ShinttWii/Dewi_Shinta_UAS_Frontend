@@ -136,18 +136,23 @@
                     </div>
 
                     <div class="space-y-2">
-                        ${items.map(item => `
+                        ${items.map(item => {
+                            const iName  = item.name  || item.product_name  || '';
+                            const iImage = item.image || item.product_image || '';
+                            const iPrice = item.price || 0;
+                            const iQty   = item.qty   || 1;
+                            return `
                             <div class="flex justify-between items-center text-[10px] md:text-xs">
                                 <div class="flex items-center gap-2.5">
-                                    <img src="${item.image||''}" onerror="this.src='https://placehold.co/100x100?text=Bag'" class="w-8 h-8 md:w-12 md:h-12 rounded-lg object-cover">
+                                    <img src="${iImage}" onerror="this.src='https://placehold.co/100x100?text=Bag'" class="w-8 h-8 md:w-12 md:h-12 rounded-lg object-cover">
                                     <div class="max-w-[140px] md:max-w-none">
-                                        <p class="font-bold truncate leading-tight">${item.name}</p>
-                                        <p class="text-[8px] md:text-[10px] opacity-50">${item.qty} pcs • Rp ${Number(item.price).toLocaleString('id-ID')}</p>
+                                        <p class="font-bold truncate leading-tight">${iName}</p>
+                                        <p class="text-[8px] md:text-[10px] opacity-50">${iQty} pcs • Rp ${Number(iPrice).toLocaleString('id-ID')}</p>
                                     </div>
                                 </div>
-                                <span class="font-black shrink-0">Rp ${(item.price * item.qty).toLocaleString('id-ID')}</span>
-                            </div>
-                        `).join('')}
+                                <span class="font-black shrink-0">Rp ${(iPrice * iQty).toLocaleString('id-ID')}</span>
+                            </div>`;
+                        }).join('')}
                     </div>
 
                     <div class="grid grid-cols-2 gap-2 bg-slate-50 dark:bg-slate-900/50 p-3 rounded-xl md:rounded-2xl border dark:border-gray-700 text-[9px] md:text-[10px]">
