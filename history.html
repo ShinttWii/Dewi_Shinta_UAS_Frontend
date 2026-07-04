@@ -72,16 +72,25 @@
             window.location.href = 'login.html?redirect=history.html';
         }
 
-        function renderHistory() {
+        async function renderHistory() {
             const container = document.getElementById('order-history-list');
             const query = document.getElementById('search-history').value.toLowerCase();
-            const allOrders = Store.getOrders();
-            
+
             updateNav();
 
-            let myOrders = allOrders.filter(o => o.userEmail === user.email);
+            // Ambil dari API dulu, fallback ke localStorage
+            let myOrders = [];
+            const apiRes = await Store.apiGetMyOrders();
+            if (apiRes.ok && apiRes.data.data && apiRes.data.data.length) {
+                myOrders = apiRes.data.data;
+            } else {
+                // fallback localStorage
+                const allOrders = Store.getOrders();
+                myOrders = allOrders.filter(o => o.userEmail === user.email);
+            }
+
             if (query) {
-                myOrders = myOrders.filter(order => 
+                myOrders = myOrders.filter(order =>
                     order.items.some(item => item.name.toLowerCase().includes(query))
                 );
             }
@@ -96,24 +105,44 @@
                 return;
             }
 
-            container.innerHTML = myOrders.map(o => `
+            const statusConfig = {
+                pending:    { label: 'Menunggu',   cls: 'bg-yellow-50 text-yellow-600 dark:bg-yellow-900/20 dark:text-yellow-400' },
+                processing: { label: 'Diproses',   cls: 'bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400' },
+                shipped:    { label: 'Dikirim',    cls: 'bg-indigo-50 text-indigo-600 dark:bg-indigo-900/20 dark:text-indigo-400' },
+                delivered:  { label: 'Selesai',    cls: 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-400' },
+                cancelled:  { label: 'Dibatalkan', cls: 'bg-red-50 text-red-500 dark:bg-red-900/20 dark:text-red-400' },
+                Dibayar:    { label: 'Dibayar',    cls: 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-400' },
+            };
+
+            container.innerHTML = myOrders.map(o => {
+                const orderId   = o.order_id || o.orderId || o.id || '';
+                const date      = o.created_at ? new Date(o.created_at).toLocaleString('id-ID') : (o.date || '');
+                const items     = o.items || [];
+                const shipping  = o.shipping || {};
+                const shipName  = o.shipping_name || shipping.name || user.name;
+                const payment   = o.payment_method || o.payment || 'Transfer';
+                const total     = o.total_price || o.totalPrice || 0;
+                const st        = o.status || 'pending';
+                const stCfg     = statusConfig[st] || { label: st, cls: 'bg-gray-100 text-gray-500' };
+
+                return `
                 <div class="bg-white dark:bg-gray-800 p-4 md:p-7 rounded-[24px] md:rounded-[40px] border dark:border-gray-700 shadow-sm space-y-3 md:space-y-5">
                     <div class="flex justify-between items-center border-b dark:border-gray-700 pb-2.5">
                         <div>
-                            <span class="text-[8px] md:text-[10px] font-black bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-300 px-2 py-0.5 rounded tracking-tighter">#${(o.orderId || o.id).toString().slice(-8)}</span>
-                            <p class="text-[9px] opacity-50 mt-1 font-medium">${o.date}</p>
+                            <span class="text-[8px] md:text-[10px] font-black bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-300 px-2 py-0.5 rounded tracking-tighter">#${String(orderId).slice(-8)}</span>
+                            <p class="text-[9px] opacity-50 mt-1 font-medium">${date}</p>
                         </div>
-                        <span class="text-[8px] md:text-[10px] font-black text-emerald-500 bg-emerald-50 dark:bg-emerald-900/20 px-2 py-0.5 rounded-full uppercase">Selesai</span>
+                        <span class="text-[8px] md:text-[10px] font-black px-2 py-0.5 rounded-full uppercase ${stCfg.cls}">${stCfg.label}</span>
                     </div>
 
                     <div class="space-y-2">
-                        ${o.items.map(item => `
+                        ${items.map(item => `
                             <div class="flex justify-between items-center text-[10px] md:text-xs">
                                 <div class="flex items-center gap-2.5">
-                                    <img src="${item.image}" onerror="this.src='https://placehold.co/100x100?text=Bag'" class="w-8 h-8 md:w-12 md:h-12 rounded-lg object-cover">
+                                    <img src="${item.image||''}" onerror="this.src='https://placehold.co/100x100?text=Bag'" class="w-8 h-8 md:w-12 md:h-12 rounded-lg object-cover">
                                     <div class="max-w-[140px] md:max-w-none">
                                         <p class="font-bold truncate leading-tight">${item.name}</p>
-                                        <p class="text-[8px] md:text-[10px] opacity-50">${item.qty} pcs • Rp ${item.price.toLocaleString('id-ID')}</p>
+                                        <p class="text-[8px] md:text-[10px] opacity-50">${item.qty} pcs • Rp ${Number(item.price).toLocaleString('id-ID')}</p>
                                     </div>
                                 </div>
                                 <span class="font-black shrink-0">Rp ${(item.price * item.qty).toLocaleString('id-ID')}</span>
@@ -124,20 +153,20 @@
                     <div class="grid grid-cols-2 gap-2 bg-slate-50 dark:bg-slate-900/50 p-3 rounded-xl md:rounded-2xl border dark:border-gray-700 text-[9px] md:text-[10px]">
                         <div>
                             <p class="opacity-40 font-black uppercase mb-0.5">Tujuan</p>
-                            <p class="font-bold truncate">${o.shipping.name || user.name}</p>
+                            <p class="font-bold truncate">${shipName}</p>
                         </div>
                         <div class="text-right border-l dark:border-gray-700 pl-2">
                             <p class="opacity-40 font-black uppercase mb-0.5">Metode</p>
-                            <p class="font-bold uppercase">${o.payment || 'Transfer'}</p>
+                            <p class="font-bold uppercase">${payment}</p>
                         </div>
                     </div>
 
                     <div class="flex justify-between items-center pt-1">
                         <p class="text-[10px] md:text-xs font-bold opacity-40 uppercase">Total Bayar</p>
-                        <p class="text-lg md:text-xl font-black text-indigo-600 tracking-tight">Rp ${o.totalPrice.toLocaleString('id-ID')}</p>
+                        <p class="text-lg md:text-xl font-black text-indigo-600 tracking-tight">Rp ${Number(total).toLocaleString('id-ID')}</p>
                     </div>
-                </div>
-            `).join('');
+                </div>`;
+            }).join('');
         }
 
         window.toggleTheme = () => {
