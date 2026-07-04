@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BagVerse Admin | Dashboard</title>
+    <script>(function(){if(localStorage.getItem('theme')==='dark')document.documentElement.classList.add('dark');})();</script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>tailwind.config={darkMode:'class',theme:{extend:{colors:{indigo:{600:'#4f46e5'}}}}}</script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap');
+        body{font-family:'Plus Jakarta Sans',sans-serif;}
+        html.dark body{background-color:#0f172a;}
+        .tab-btn.active{background:#4f46e5;color:white;}
+        .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:200;align-items:center;justify-content:center;padding:1rem;}
+        .modal-overlay.show{display:flex;}
+    </style>
+</head>
+<body class="bg-slate-50 dark:bg-slate-900 dark:text-white min-h-screen">
+
+<!-- NAVBAR -->
+<nav class="bg-white/80 dark:bg-gray-800/80 backdrop-blur-md sticky top-0 z-50 border-b dark:border-gray-800 shadow-sm font-bold">
+    <div class="container mx-auto px-4 py-3 flex justify-between items-center">
+        <h1 class="text-xl font-black text-indigo-600 tracking-tighter cursor-pointer" onclick="location.href='index.html'">BAGVERSE.</h1>
+        <div class="flex items-center gap-4 text-xs">
+            <a href="index.html" class="opacity-60 hover:opacity-100">Toko Utama</a>
+            <span class="opacity-40 font-bold text-[10px] uppercase tracking-widest">Admin</span>
+            <button onclick="toggleTheme()" class="p-2 bg-gray-100 dark:bg-gray-700 rounded-xl text-xs">🌓</button>
+            <button onclick="adminLogout()" class="text-red-500 font-bold uppercase text-[10px]">Logout</button>
+        </div>
+    </div>
+</nav>
+
+<!-- TAB NAVIGATION -->
+<div class="container mx-auto px-4 pt-6 max-w-6xl">
+    <div class="flex gap-2 mb-6 bg-white dark:bg-gray-800 p-1.5 rounded-2xl shadow-sm border dark:border-gray-700 w-fit">
+        <button class="tab-btn active px-4 py-2 rounded-xl text-xs font-black uppercase transition" onclick="switchTab('dashboard')">📊 Dashboard</button>
+        <button class="tab-btn px-4 py-2 rounded-xl text-xs font-black uppercase transition bg-transparent opacity-60" onclick="switchTab('products')">📦 Produk</button>
+        <button class="tab-btn px-4 py-2 rounded-xl text-xs font-black uppercase transition bg-transparent opacity-60" onclick="switchTab('orders')">🛒 Pesanan</button>
+        <button class="tab-btn px-4 py-2 rounded-xl text-xs font-black uppercase transition bg-transparent opacity-60" onclick="switchTab('users')">👤 Users</button>
+    </div>
+
+<!-- TAB: DASHBOARD -->
+<div id="tab-dashboard" class="tab-content pb-10">
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6 mb-8">
+        <div class="bg-white dark:bg-gray-800 p-4 md:p-6 rounded-[24px] border dark:border-gray-700 shadow-sm">
+            <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Revenue</p>
+            <p id="stat-revenue" class="text-sm md:text-2xl font-black mt-1 text-emerald-500">Memuat...</p>
+        </div>
+        <div class="bg-white dark:bg-gray-800 p-4 md:p-6 rounded-[24px] border dark:border-gray-700 shadow-sm">
+            <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Orders</p>
+            <p id="stat-orders" class="text-sm md:text-2xl font-black mt-1">0</p>
+        </div>
+        <div class="bg-white dark:bg-gray-800 p-4 md:p-6 rounded-[24px] border dark:border-gray-700 shadow-sm">
+            <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Average</p>
+            <p id="stat-avg" class="text-sm md:text-2xl font-black mt-1">Rp 0</p>
+        </div>
+        <div class="bg-white dark:bg-gray-800 p-4 md:p-6 rounded-[24px] border dark:border-gray-700 shadow-sm">
+            <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Sold Units</p>
+            <p id="stat-items" class="text-sm md:text-2xl font-black mt-1 text-indigo-500">0</p>
+        </div>
+    </div>
+    <div class="grid lg:grid-cols-3 gap-6 mb-8">
+        <div class="lg:col-span-2 bg-white dark:bg-gray-800 p-4 md:p-6 rounded-[24px] border dark:border-gray-700 shadow-sm">
+            <h3 class="font-black text-[10px] uppercase opacity-40 mb-4 tracking-widest">Sales Trend (7 Hari)</h3>
+            <div class="h-[200px] md:h-[280px]"><canvas id="salesChart"></canvas></div>
+        </div>
+        <div class="bg-white dark:bg-gray-800 p-4 md:p-6 rounded-[24px] border dark:border-gray-700 shadow-sm">
+            <h3 class="font-black text-[10px] uppercase opacity-40 mb-4 tracking-widest">Best Categories</h3>
+            <div class="space-y-4" id="category-stats"></div>
+        </div>
+    </div>
+    <div class="bg-white dark:bg-gray-800 rounded-[24px] border dark:border-gray-700 shadow-sm overflow-hidden">
+        <div class="p-4 md:p-6 border-b dark:border-gray-700 flex justify-between items-center">
+            <h3 class="font-black text-[10px] uppercase opacity-40 tracking-widest">Transaction Log</h3>
+            <button onclick="exportCSV()" class="text-[10px] font-bold text-indigo-500 hover:underline">EXPORT CSV</button>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full text-left">
+                <thead class="bg-slate-50 dark:bg-slate-900/50 text-[9px] font-black uppercase text-slate-500">
+                    <tr>
+                        <th class="p-3 md:p-4">Order ID</th>
+                        <th class="p-3 md:p-4">Tanggal</th>
+                        <th class="p-3 md:p-4">Customer</th>
+                        <th class="p-3 md:p-4">Total</th>
+                        <th class="p-3 md:p-4 text-center">Status</th>
+                    </tr>
+                </thead>
+                <tbody id="order-rows" class="text-xs divide-y dark:divide-gray-700"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- TAB: PRODUK -->
+<div id="tab-products" class="tab-content hidden pb-10">
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 mb-6">
+        <h2 class="text-2xl font-black">Manajemen Produk</h2>
+        <button onclick="openProductModal()" class="bg-indigo-600 text-white px-5 py-2.5 rounded-xl font-black text-xs hover:bg-indigo-700 transition">+ Tambah Produk</button>
+    </div>
+    <div class="bg-white dark:bg-gray-800 rounded-[24px] border dark:border-gray-700 shadow-sm overflow-hidden">
+        <div class="p-4 border-b dark:border-gray-700 flex gap-3">
+            <input type="text" id="product-search" placeholder="🔍 Cari produk..." onInput="filterProducts()"
+                class="flex-1 p-2.5 rounded-xl bg-slate-50 dark:bg-gray-700 text-xs border dark:border-gray-600 outline-none focus:ring-2 focus:ring-indigo-500">
+            <select id="product-cat-filter" onchange="filterProducts()"
+                class="p-2.5 rounded-xl bg-slate-50 dark:bg-gray-700 text-xs border dark:border-gray-600 outline-none font-bold">
+                <option value="">Semua Kategori</option>
+                <option value="Pria">Pria</option>
+                <option value="Wanita">Wanita</option>
+                <option value="Unisex">Unisex</option>
+            </select>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full text-left">
+                <thead class="bg-slate-50 dark:bg-slate-900/50 text-[9px] font-black uppercase text-slate-500">
+                    <tr>
+                        <th class="p-3 md:p-4">Produk</th>
+                        <th class="p-3 md:p-4">Kategori</th>
+                        <th class="p-3 md:p-4">Harga</th>
+                        <th class="p-3 md:p-4">Stok</th>
+                        <th class="p-3 md:p-4">Rating</th>
+                        <th class="p-3 md:p-4">Status</th>
+                        <th class="p-3 md:p-4 text-center">Aksi</th>
+                    </tr>
+                </thead>
+                <tbody id="product-rows" class="text-xs divide-y dark:divide-gray-700"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- TAB: PESANAN -->
+<div id="tab-orders" class="tab-content hidden pb-10">
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 mb-6">
+        <h2 class="text-2xl font-black">Manajemen Pesanan</h2>
+        <select id="order-status-filter" onchange="loadOrders()" class="p-2.5 rounded-xl bg-white dark:bg-gray-700 text-xs border dark:border-gray-600 outline-none font-bold">
+            <option value="">Semua Status</option>
+            <option value="pending">Pending</option>
+            <option value="processing">Processing</option>
+            <option value="shipped">Shipped</option>
+            <option value="delivered">Delivered</option>
+            <option value="cancelled">Cancelled</option>
+        </select>
+    </div>
+    <div class="bg-white dark:bg-gray-800 rounded-[24px] border dark:border-gray-700 shadow-sm overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="w-full text-left">
+                <thead class="bg-slate-50 dark:bg-slate-900/50 text-[9px] font-black uppercase text-slate-500">
+                    <tr>
+                        <th class="p-3 md:p-4">Order ID</th>
+                        <th class="p-3 md:p-4">Customer</th>
+                        <th class="p-3 md:p-4">Tujuan</th>
+                        <th class="p-3 md:p-4">Total</th>
+                        <th class="p-3 md:p-4">Metode</th>
+                        <th class="p-3 md:p-4 text-center">Status</th>
+                        <th class="p-3 md:p-4 text-center">Aksi</th>
+                    </tr>
+                </thead>
+                <tbody id="orders-table-body" class="text-xs divide-y dark:divide-gray-700"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- TAB: USERS -->
+<div id="tab-users" class="tab-content hidden pb-10">
+    <h2 class="text-2xl font-black mb-6">Manajemen Users</h2>
+    <div class="bg-white dark:bg-gray-800 rounded-[24px] border dark:border-gray-700 shadow-sm overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="w-full text-left">
+                <thead class="bg-slate-50 dark:bg-slate-900/50 text-[9px] font-black uppercase text-slate-500">
+                    <tr>
+                        <th class="p-3 md:p-4">ID</th>
+                        <th class="p-3 md:p-4">Nama</th>
+                        <th class="p-3 md:p-4">Email</th>
+                        <th class="p-3 md:p-4">Role</th>
+                        <th class="p-3 md:p-4">Bergabung</th>
+                        <th class="p-3 md:p-4 text-center">Aksi</th>
+                    </tr>
+                </thead>
+                <tbody id="users-table-body" class="text-xs divide-y dark:divide-gray-700"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+</div><!-- end container -->
+
+<!-- MODAL: Tambah/Edit Produk -->
+<div id="product-modal" class="modal-overlay" onclick="if(event.target===this)closeProductModal()">
+    <div class="bg-white dark:bg-gray-800 rounded-[32px] p-6 md:p-8 w-full max-w-lg shadow-2xl border dark:border-gray-700">
+        <h3 id="modal-title" class="text-xl font-black mb-5">Tambah Produk</h3>
+        <form id="product-form" class="space-y-3">
+            <input type="hidden" id="edit-id">
+            <div class="grid md:grid-cols-2 gap-3">
+                <div class="md:col-span-2">
+                    <label class="text-[9px] font-black opacity-40 uppercase ml-1">Nama Produk *</label>
+                    <input type="text" id="f-name" required placeholder="Urban Backpack..." class="w-full p-3 rounded-xl border dark:bg-gray-700 dark:border-gray-600 outline-none focus:ring-2 focus:ring-indigo-500 text-xs mt-1">
+                </div>
+                <div>
+                    <label class="text-[9px] font-black opacity-40 uppercase ml-1">Harga (Rp) *</label>
+                    <input type="number" id="f-price" required min="0" placeholder="1250000" class="w-full p-3 rounded-xl border dark:bg-gray-700 dark:border-gray-600 outline-none focus:ring-2 focus:ring-indigo-500 text-xs mt-1">
+                </div>
+                <div>
+                    <label class="text-[9px] font-black opacity-40 uppercase ml-1">Kategori *</label>
+                    <select id="f-category" required class="w-full p-3 rounded-xl border dark:bg-gray-700 dark:border-gray-600 outline-none font-bold text-xs mt-1">
+                        <option value="Unisex">Unisex</option>
+                        <option value="Pria">Pria</option>
+                        <option value="Wanita">Wanita</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="text-[9px] font-black opacity-40 uppercase ml-1">Rating (1-5)</label>
+                    <input type="number" id="f-rating" min="1" max="5" value="5" class="w-full p-3 rounded-xl border dark:bg-gray-700 dark:border-gray-600 outline-none focus:ring-2 focus:ring-indigo-500 text-xs mt-1">
+                </div>
+                <div>
+                    <label class="text-[9px] font-black opacity-40 uppercase ml-1">Stok</label>
+                    <input type="number" id="f-stock" min="0" value="0" class="w-full p-3 rounded-xl border dark:bg-gray-700 dark:border-gray-600 outline-none focus:ring-2 focus:ring-indigo-500 text-xs mt-1">
+                </div>
+                <div class="md:col-span-2">
+                    <label class="text-[9px] font-black opacity-40 uppercase ml-1">URL Gambar</label>
+                    <input type="url" id="f-image" placeholder="https://images.unsplash.com/..." class="w-full p-3 rounded-xl border dark:bg-gray-700 dark:border-gray-600 outline-none focus:ring-2 focus:ring-indigo-500 text-xs mt-1">
+                </div>
+                <div class="md:col-span-2">
+                    <label class="text-[9px] font-black opacity-40 uppercase ml-1">Deskripsi</label>
+                    <textarea id="f-desc" rows="3" placeholder="Deskripsi produk..." class="w-full p-3 rounded-xl border dark:bg-gray-700 dark:border-gray-600 outline-none focus:ring-2 focus:ring-indigo-500 text-xs mt-1"></textarea>
+                </div>
+            </div>
+            <div id="modal-error" class="text-red-500 text-xs hidden"></div>
+            <div class="flex gap-3 pt-2">
+                <button type="button" onclick="closeProductModal()" class="flex-1 py-3 rounded-xl border dark:border-gray-600 font-bold text-xs hover:bg-gray-100 dark:hover:bg-gray-700 transition">Batal</button>
+                <button type="submit" id="modal-submit-btn" class="flex-[2] bg-indigo-600 text-white py-3 rounded-xl font-black text-xs hover:bg-indigo-700 transition">Simpan</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div id="toast" class="fixed bottom-10 left-1/2 -translate-x-1/2 translate-y-40 opacity-0 transition-all duration-500"></div>
+
+<script type="module">
+import { Store, showToast } from './app.js';
+window.Store = Store;
+window.showToast = showToast;
+
+// Guard: hanya admin
+const user = Store.getUser();
+if (!user || user.role !== 'admin') window.location.href = 'admin-login.html';
+
+Store.initTheme();
+window.toggleTheme = () => { const d = document.documentElement.classList.toggle('dark'); localStorage.setItem('theme', d ? 'dark' : 'light'); };
+window.adminLogout = () => { localStorage.removeItem('session'); localStorage.removeItem('auth_token'); window.location.href = 'admin-login.html'; };
+
+// ===================== TAB SWITCHING =====================
+window.switchTab = (tab) => {
+    document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+    document.querySelectorAll('.tab-btn').forEach(el => { el.classList.remove('active'); el.classList.add('opacity-60'); });
+    document.getElementById('tab-' + tab).classList.remove('hidden');
+    const btns = document.querySelectorAll('.tab-btn');
+    const tabs = ['dashboard','products','orders','users'];
+    btns[tabs.indexOf(tab)].classList.add('active');
+    btns[tabs.indexOf(tab)].classList.remove('opacity-60');
+    if (tab === 'dashboard') initDashboard();
+    else if (tab === 'products') loadProducts();
+    else if (tab === 'orders') loadOrders();
+    else if (tab === 'users') loadUsers();
+};
+
+// ===================== DASHBOARD =====================
+let allOrders = [];
+async function initDashboard() {
+    // Coba API stats
+    const statsRes = await Store.apiGetStats();
+    let revenue = 0, ordersCount = 0, items = 0, avg = 0;
+
+    if (statsRes.ok && statsRes.data.success) {
+        const s = statsRes.data.data;
+        revenue = s.total_revenue; ordersCount = s.total_orders;
+        items = s.total_items_sold; avg = s.avg_order_value;
+        renderCategoryStats(s.category_stats);
+        renderChart(s.sales_trend);
+    } else {
+        // Fallback localStorage
+        const orders = JSON.parse(localStorage.getItem('orders')) || [];
+        revenue = orders.reduce((s, o) => s + (o.totalPrice || 0), 0);
+        ordersCount = orders.length;
+        items = orders.reduce((s, o) => s + (o.items?.reduce((a,i) => a + i.qty, 0) || 0), 0);
+        avg = ordersCount ? Math.round(revenue / ordersCount) : 0;
+        renderCategoryStats(null);
+        renderChart(null);
+    }
+
+    document.getElementById('stat-revenue').innerText = `Rp ${Number(revenue).toLocaleString('id-ID')}`;
+    document.getElementById('stat-orders').innerText = ordersCount;
+    document.getElementById('stat-items').innerText = items;
+    document.getElementById('stat-avg').innerText = `Rp ${Number(avg).toLocaleString('id-ID')}`;
+
+    await renderOrderTable();
+}
+
+async function renderOrderTable() {
+    const res = await Store.apiGetAllOrders({ limit: 50 });
+    let orders = [];
+    if (res.ok && res.data.data) { orders = res.data.data; allOrders = orders; }
+    else {
+        orders = JSON.parse(localStorage.getItem('orders')) || [];
+        allOrders = orders;
+    }
+    const tbody = document.getElementById('order-rows');
+    const statusColor = { pending:'yellow', processing:'blue', shipped:'indigo', delivered:'emerald', cancelled:'red', Dibayar:'emerald', Selesai:'emerald' };
+    tbody.innerHTML = orders.length ? [...orders].reverse().slice(0, 20).map(o => {
+        const oid = o.order_id || o.orderId || o.id || '';
+        const name = o.shipping_name || o.shipping?.name || o.customerName || '-';
+        const price = o.total_price || o.totalPrice || 0;
+        const date = o.created_at ? new Date(o.created_at).toLocaleDateString('id-ID') : (o.date || '').split(',')[0];
+        const st = o.status || 'pending';
+        const c = statusColor[st] || 'gray';
+        return `<tr class="hover:bg-slate-50 dark:hover:bg-gray-700/50 transition">
+            <td class="p-3 md:p-4 font-mono text-indigo-500 text-[10px]">#${String(oid).slice(-8)}</td>
+            <td class="p-3 md:p-4 opacity-60 text-[10px]">${date}</td>
+            <td class="p-3 md:p-4 font-bold text-[10px]">${name}</td>
+            <td class="p-3 md:p-4 font-black text-[10px]">Rp ${Number(price).toLocaleString('id-ID')}</td>
+            <td class="p-3 md:p-4 text-center"><span class="bg-${c}-100 text-${c}-700 dark:bg-${c}-900/30 dark:text-${c}-400 px-2 py-0.5 rounded-full text-[8px] font-black uppercase">${st}</span></td>
+        </tr>`;
+    }).join('') : '<tr><td colspan="5" class="p-10 text-center opacity-30 text-xs">Belum ada transaksi.</td></tr>';
+}
+</script>
+
+<script type="module">
+import { Store, showToast } from './app.js';
+// (JS lanjutan - chart & kategori)
+let salesChartInstance = null;
+
+window.renderChart = function(trendData) {
+    const ctx = document.getElementById('salesChart');
+    if (!ctx) return;
+    if (salesChartInstance) { salesChartInstance.destroy(); salesChartInstance = null; }
+    let labels = ['Sen','Sel','Rab','Kam','Jum','Sab','Min'];
+    let values = [12, 19, 15, 25, 22, 30, 45];
+    if (trendData && trendData.length > 0) {
+        labels = trendData.map(d => new Date(d.date).toLocaleDateString('id-ID', { weekday: 'short' }));
+        values = trendData.map(d => d.orders);
+    }
+    salesChartInstance = new Chart(ctx.getContext('2d'), {
+        type: 'line',
+        data: { labels, datasets: [{ data: values, borderColor: '#4f46e5', backgroundColor: 'rgba(79,70,229,0.1)', fill: true, tension: 0.4, borderWidth: 2, pointRadius: 3 }] },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { display: false }, x: { grid: { display: false }, ticks: { font: { size: 9 } } } } }
+    });
+};
+
+window.renderCategoryStats = function(data) {
+    const container = document.getElementById('category-stats');
+    if (!container) return;
+    const cats = data && data.length ? data : [{ category: 'Pria', total_qty: 45 }, { category: 'Wanita', total_qty: 38 }, { category: 'Unisex', total_qty: 52 }];
+    const maxQty = Math.max(...cats.map(c => c.total_qty || 1));
+    container.innerHTML = cats.map(c => {
+        const pct = Math.round(((c.total_qty || 1) / maxQty) * 100);
+        return `<div>
+            <div class="flex justify-between text-[9px] font-black mb-1.5 uppercase opacity-60">
+                <span>${c.category}</span><span>${pct}%</span>
+            </div>
+            <div class="w-full bg-slate-100 dark:bg-gray-700 h-1.5 rounded-full overflow-hidden">
+                <div class="bg-indigo-500 h-full rounded-full" style="width:${pct}%"></div>
+            </div>
+        </div>`;
+    }).join('');
+};
+
+// ===================== PRODUCTS =====================
+let allProducts = [], filteredProducts = [];
+
+window.loadProducts = async function() {
+    document.getElementById('product-rows').innerHTML = '<tr><td colspan="7" class="p-8 text-center text-xs opacity-40">Memuat...</td></tr>';
+    const res = await Store.apiGetAllProducts();
+    if (res.ok && res.data.data) { allProducts = res.data.data; }
+    else {
+        allProducts = await Store.getProducts();
+    }
+    filteredProducts = [...allProducts];
+    renderProductTable();
+};
+
+window.filterProducts = function() {
+    const q = document.getElementById('product-search').value.toLowerCase();
+    const cat = document.getElementById('product-cat-filter').value;
+    filteredProducts = allProducts.filter(p =>
+        (!q || p.name.toLowerCase().includes(q) || (p.description||'').toLowerCase().includes(q)) &&
+        (!cat || p.category === cat)
+    );
+    renderProductTable();
+};
+
+function renderProductTable() {
+    const tbody = document.getElementById('product-rows');
+    if (!filteredProducts.length) { tbody.innerHTML = '<tr><td colspan="7" class="p-8 text-center text-xs opacity-40">Produk tidak ditemukan.</td></tr>'; return; }
+    tbody.innerHTML = filteredProducts.map(p => `
+        <tr class="hover:bg-slate-50 dark:hover:bg-gray-700/50 transition">
+            <td class="p-3 md:p-4">
+                <div class="flex items-center gap-3">
+                    <img src="${p.image||''}" onerror="this.src='https://placehold.co/60x60?text=Bag'" class="w-10 h-10 rounded-xl object-cover">
+                    <div><p class="font-bold text-xs line-clamp-1">${p.name}</p><p class="text-[9px] opacity-40">#${p.id}</p></div>
+                </div>
+            </td>
+            <td class="p-3 md:p-4 text-xs"><span class="bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 px-2 py-0.5 rounded-full font-bold text-[9px]">${p.category}</span></td>
+            <td class="p-3 md:p-4 font-black text-xs text-indigo-600">Rp ${Number(p.price).toLocaleString('id-ID')}</td>
+            <td class="p-3 md:p-4 text-xs font-bold">${p.stock ?? '-'}</td>
+            <td class="p-3 md:p-4 text-xs">⭐ ${p.rating}/5</td>
+            <td class="p-3 md:p-4"><span class="px-2 py-0.5 rounded-full text-[8px] font-black uppercase ${p.is_active===0||p.is_active===false ? 'bg-red-100 text-red-600' : 'bg-emerald-100 text-emerald-700'}">${p.is_active===0||p.is_active===false ? 'Nonaktif' : 'Aktif'}</span></td>
+            <td class="p-3 md:p-4 text-center">
+                <div class="flex justify-center gap-2">
+                    <button onclick="openProductModal(${p.id})" class="text-indigo-600 hover:underline text-[10px] font-bold">Edit</button>
+                    <button onclick="deleteProduct(${p.id})" class="text-red-500 hover:underline text-[10px] font-bold">Hapus</button>
+                </div>
+            </td>
+        </tr>`).join('');
+}
+</script>
+
+<script type="module">
+import { Store, showToast } from './app.js';
+
+// ===================== PRODUCT MODAL =====================
+window.openProductModal = async function(id = null) {
+    const modal = document.getElementById('product-modal');
+    document.getElementById('modal-error').classList.add('hidden');
+    document.getElementById('product-form').reset();
+    document.getElementById('edit-id').value = '';
+
+    if (id) {
+        document.getElementById('modal-title').innerText = 'Edit Produk';
+        document.getElementById('modal-submit-btn').innerText = 'Update';
+        const res = await Store.apiGetProduct(id);
+        const p = res.ok ? res.data.data : (JSON.parse(localStorage.getItem('all_products') || '[]')).find(x => x.id == id);
+        if (p) {
+            document.getElementById('edit-id').value = p.id;
+            document.getElementById('f-name').value = p.name || '';
+            document.getElementById('f-price').value = p.price || 0;
+            document.getElementById('f-category').value = p.category || 'Unisex';
+            document.getElementById('f-rating').value = p.rating || 5;
+            document.getElementById('f-stock').value = p.stock || 0;
+            document.getElementById('f-image').value = p.image || '';
+            document.getElementById('f-desc').value = p.description || '';
+        }
+    } else {
+        document.getElementById('modal-title').innerText = 'Tambah Produk';
+        document.getElementById('modal-submit-btn').innerText = 'Simpan';
+    }
+    modal.classList.add('show');
+};
+
+window.closeProductModal = function() { document.getElementById('product-modal').classList.remove('show'); };
+
+document.getElementById('product-form').onsubmit = async (e) => {
+    e.preventDefault();
+    const errEl = document.getElementById('modal-error');
+    errEl.classList.add('hidden');
+    const btn = document.getElementById('modal-submit-btn');
+    btn.innerText = 'Menyimpan...'; btn.disabled = true;
+
+    const data = {
+        name: document.getElementById('f-name').value.trim(),
+        price: parseInt(document.getElementById('f-price').value),
+        category: document.getElementById('f-category').value,
+        rating: parseInt(document.getElementById('f-rating').value),
+        stock: parseInt(document.getElementById('f-stock').value),
+        image: document.getElementById('f-image').value.trim(),
+        description: document.getElementById('f-desc').value.trim()
+    };
+
+    const editId = document.getElementById('edit-id').value;
+    const res = editId ? await Store.apiUpdateProduct(editId, data) : await Store.apiCreateProduct(data);
+
+    if (res.ok && res.data.success) {
+        showToast(editId ? '✅ Produk diupdate!' : '✅ Produk ditambahkan!');
+        closeProductModal();
+        loadProducts();
+    } else {
+        errEl.innerText = res.data.message || 'Gagal menyimpan produk.';
+        errEl.classList.remove('hidden');
+    }
+    btn.innerText = 'Simpan'; btn.disabled = false;
+};
+
+window.deleteProduct = async function(id) {
+    if (!confirm('Hapus produk ini?')) return;
+    const res = await Store.apiDeleteProduct(id);
+    if (res.ok && res.data.success) { showToast('🗑️ Produk dihapus.'); loadProducts(); }
+    else showToast(res.data.message || 'Gagal hapus produk.');
+};
+
+// ===================== ORDERS =====================
+window.loadOrders = async function() {
+    const status = document.getElementById('order-status-filter')?.value || '';
+    const params = status ? { status } : {};
+    const res = await Store.apiGetAllOrders(params);
+    let orders = [];
+    if (res.ok && res.data.data) { orders = res.data.data; }
+    else { orders = JSON.parse(localStorage.getItem('orders')) || []; }
+
+    const tbody = document.getElementById('orders-table-body');
+    const statusColor = { pending:'yellow', processing:'blue', shipped:'indigo', delivered:'emerald', cancelled:'red' };
+    const statusNext = { pending:'processing', processing:'shipped', shipped:'delivered' };
+
+    tbody.innerHTML = orders.length ? orders.map(o => {
+        const oid = o.order_id || o.orderId || '';
+        const name = o.shipping_name || o.shipping?.name || o.customer_name || '-';
+        const email = o.customer_email || o.shipping?.email || '';
+        const addr = o.shipping_address || o.shipping?.address || '';
+        const price = o.total_price || o.totalPrice || 0;
+        const st = o.status || 'pending';
+        const c = statusColor[st] || 'gray';
+        const next = statusNext[st];
+        return `<tr class="hover:bg-slate-50 dark:hover:bg-gray-700/50 transition">
+            <td class="p-3 md:p-4 font-mono text-indigo-500 text-[10px]">#${String(oid).slice(-8)}</td>
+            <td class="p-3 md:p-4 text-[10px]"><p class="font-bold">${name}</p><p class="opacity-40 text-[9px]">${email}</p></td>
+            <td class="p-3 md:p-4 text-[9px] opacity-60 max-w-[120px] truncate">${addr}</td>
+            <td class="p-3 md:p-4 font-black text-[10px]">Rp ${Number(price).toLocaleString('id-ID')}</td>
+            <td class="p-3 md:p-4 text-[9px] font-bold">${o.payment_method || o.payment || '-'}</td>
+            <td class="p-3 md:p-4 text-center"><span class="bg-${c}-100 text-${c}-700 dark:bg-${c}-900/30 px-2 py-0.5 rounded-full text-[8px] font-black uppercase">${st}</span></td>
+            <td class="p-3 md:p-4 text-center">
+                ${next ? `<button onclick="updateOrderStatus('${oid}','${next}')" class="text-indigo-600 hover:underline text-[9px] font-bold">${next} ▶</button>` : '<span class="text-[9px] opacity-30">—</span>'}
+            </td>
+        </tr>`;
+    }).join('') : '<tr><td colspan="7" class="p-10 text-center text-xs opacity-30">Belum ada pesanan.</td></tr>';
+};
+
+window.updateOrderStatus = async function(orderId, status) {
+    const res = await Store.apiUpdateOrderStatus(orderId, status);
+    if (res.ok && res.data.success) { showToast(`✅ Status → ${status}`); loadOrders(); }
+    else showToast('Gagal update status');
+};
+
+// ===================== USERS =====================
+window.loadUsers = async function() {
+    const res = await Store.apiGetAllUsers ? await Store.apiGetAllUsers() : { ok: false };
+    const resUsers = await fetch('http://localhost:3000/api/users', {
+        headers: { 'Authorization': `Bearer ${Store.getToken()}` }
+    }).then(r => r.json()).catch(() => ({ success: false }));
+
+    const tbody = document.getElementById('users-table-body');
+    if (resUsers.success && resUsers.data) {
+        tbody.innerHTML = resUsers.data.map(u => `
+            <tr class="hover:bg-slate-50 dark:hover:bg-gray-700/50 transition">
+                <td class="p-3 text-[10px] font-mono opacity-50">#${u.id}</td>
+                <td class="p-3 text-xs font-bold">${u.name}</td>
+                <td class="p-3 text-[10px] opacity-60">${u.email}</td>
+                <td class="p-3"><span class="px-2 py-0.5 rounded-full text-[8px] font-black uppercase ${u.role==='admin'?'bg-indigo-100 text-indigo-700':'bg-gray-100 text-gray-600'}">${u.role}</span></td>
+                <td class="p-3 text-[9px] opacity-50">${new Date(u.created_at).toLocaleDateString('id-ID')}</td>
+                <td class="p-3 text-center">
+                    ${u.role !== 'admin' ? `<button onclick="deleteUser(${u.id})" class="text-red-500 text-[9px] font-bold hover:underline">Hapus</button>` : '<span class="text-[9px] opacity-30">—</span>'}
+                </td>
+            </tr>`).join('');
+    } else {
+        tbody.innerHTML = '<tr><td colspan="6" class="p-8 text-center text-xs opacity-40">Tidak dapat memuat data users (perlu koneksi API).</td></tr>';
+    }
+};
+
+window.deleteUser = async function(id) {
+    if (!confirm('Hapus user ini?')) return;
+    const res = await fetch(`http://localhost:3000/api/users/${id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${Store.getToken()}` }
+    }).then(r => r.json()).catch(() => ({ success: false }));
+    if (res.success) { showToast('🗑️ User dihapus'); loadUsers(); }
+    else showToast('Gagal hapus user');
+};
+
+// ===================== EXPORT CSV =====================
+window.exportCSV = function() {
+    const orders = allOrders.length ? allOrders : (JSON.parse(localStorage.getItem('orders')) || []);
+    if (!orders.length) { showToast('Tidak ada data untuk diekspor'); return; }
+    const rows = [['Order ID','Tanggal','Customer','Total','Status']];
+    orders.forEach(o => {
+        rows.push([
+            o.order_id || o.orderId || '',
+            o.created_at ? new Date(o.created_at).toLocaleDateString('id-ID') : (o.date || ''),
+            o.shipping_name || o.shipping?.name || '',
+            o.total_price || o.totalPrice || 0,
+            o.status || 'pending'
+        ]);
+    });
+    const csv = rows.map(r => r.join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `bagverse_orders_${Date.now()}.csv`;
+    a.click();
+};
+
+// Auto-init
+window.initDashboard();
+</script>
+</body>
+</html>

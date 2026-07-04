@@ -1,0 +1,179 @@
+﻿<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BagVerse | Wishlist</title>
+    <script>
+        (function() {
+            if (localStorage.getItem('theme') === 'dark') document.documentElement.classList.add('dark');
+        })();
+    </script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = { 
+            darkMode: 'class',
+            theme: { extend: { colors: { indigo: { 600: '#4f46e5' } } } }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap');
+        body { font-family: 'Plus Jakarta Sans', sans-serif; }
+        html.dark body { background-color: #111827; }
+        .transition-all { transition: all 0.3s ease; }
+    </style>
+</head>
+<body class="bg-gray-50 dark:bg-gray-900 dark:text-white transition-all min-h-screen">
+    
+    <nav class="bg-white/80 dark:bg-gray-800/80 backdrop-blur-md sticky top-0 z-50 border-b dark:border-gray-800 shadow-sm font-bold">
+        <div class="container mx-auto px-2 py-3 md:px-4 md:py-4 flex justify-between items-center">
+            
+            <h1 class="text-xl md:text-2xl font-black text-indigo-600 cursor-pointer tracking-tighter shrink-0 mr-2" onclick="location.href='index.html'">
+                BAGVERSE.
+            </h1>
+            
+            <div class="flex items-center gap-2 sm:gap-4 md:gap-6 text-[9px] xs:text-[10px] md:text-sm">
+                <a href="index.html" class="opacity-60 hover:opacity-100 transition whitespace-nowrap">Beranda</a>
+                <a href="wishlist.html" class="text-indigo-600 border-b-2 border-indigo-600"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="display:inline-block;vertical-align:middle;"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg></a>
+                <a href="history.html" onclick="goHistory(event)" class="opacity-60 hover:opacity-100 transition whitespace-nowrap">Riwayat</a>
+                
+                <a href="cart.html" class="relative text-base md:text-xl shrink-0 ml-1">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:inline-block;vertical-align:middle;"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg> <span id="cart-count" class="absolute -top-1 -right-2 bg-red-500 text-white text-[8px] px-1 rounded-full font-bold border border-white dark:border-gray-800">0</span>
+                </a>
+                
+                <div id="nav-auth" class="shrink-0"></div>
+                
+                <button onclick="toggleTheme()" class="p-1.5 md:p-2 bg-gray-100 dark:bg-gray-700 rounded-lg md:rounded-xl text-xs">
+                    🌓
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <main class="container mx-auto px-4 py-6 md:py-10 max-w-5xl">
+        <header class="mb-6 md:mb-8 text-center md:text-left">
+            <h2 class="text-2xl md:text-3xl font-black italic uppercase tracking-tighter">Daftar Keinginan</h2>
+            <p class="text-[10px] md:text-xs opacity-50 uppercase tracking-widest font-bold">Barang impian yang kamu simpan</p>
+        </header>
+        
+        <div id="wishlist-grid" class="grid grid-cols-2 lg:grid-cols-3 gap-3 md:gap-8 mb-12"></div>
+    </main>
+
+    <div id="toast" class="fixed bottom-10 left-1/2 -translate-x-1/2 translate-y-40 opacity-0 transition-all duration-500"></div>
+
+    <script type="module">
+        import { Store, showToast } from './app.js';
+        Store.initTheme();
+
+        function renderWishlist() {
+            const container = document.getElementById('wishlist-grid');
+            const list = Store.getWishlist();
+            updateNav();
+
+            if(list.length === 0) {
+                container.innerHTML = `
+                    <div class="col-span-full py-20 text-center opacity-30 font-bold italic">
+                        <p class="text-4xl md:text-5xl mb-4">✨</p>
+                        <p class="text-xs md:text-sm">Belum ada barang impian yang disimpan.</p>
+                        <button onclick="location.href='index.html'" class="mt-4 text-indigo-600 underline text-xs">Cari Produk</button>
+                    </div>`;
+                return;
+            }
+
+            container.innerHTML = list.map(p => `
+                <div class="bg-white dark:bg-gray-800 p-3 md:p-4 rounded-[24px] md:rounded-[32px] border dark:border-gray-700 shadow-sm flex flex-col group h-full relative">
+                    <div class="h-36 md:h-48 overflow-hidden rounded-xl md:rounded-2xl mb-3 md:mb-4 bg-gray-100 dark:bg-gray-700">
+                        <img src="${p.image}" onerror="this.src='https://placehold.co/500x500?text=No+Img'" class="w-full h-full object-cover group-hover:scale-105 transition duration-500">
+                    </div>
+                    
+                    <div class="flex flex-col md:flex-row md:justify-between md:items-center mb-1">
+                        <span class="text-[8px] md:text-[10px] font-black text-indigo-500 uppercase tracking-widest">${p.category || 'Unisex'}</span>
+                        <div class="text-yellow-400 text-[8px] md:text-[10px]">${'⭐'.repeat(p.rating || 5)}</div>
+                    </div>
+
+                    <h3 class="font-bold text-xs md:text-lg leading-tight mb-1 md:mb-2 line-clamp-1">${p.name}</h3>
+                    
+                    <p class="text-[9px] md:text-xs opacity-60 mb-4 md:mb-6 line-clamp-1 md:line-clamp-2 min-h-[12px] md:min-h-[32px]">
+                        ${p.description || 'Premium collection.'}
+                    </p>
+
+                    <div class="mt-auto">
+                        <p class="text-indigo-600 font-black text-sm md:text-xl mb-3 md:mb-4">Rp ${p.price.toLocaleString('id-ID')}</p>
+                        <div class="flex flex-col sm:flex-row gap-2">
+                            <button onclick="removeWish(${p.id})" class="flex-1 bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-300 py-2 md:py-3 rounded-lg md:rounded-xl font-bold text-[9px] md:text-[10px] hover:bg-red-50 hover:text-red-500 transition">Hapus</button>
+                            <button onclick="toCart(${p.id})" class="flex-[2] bg-indigo-600 text-white py-2 md:py-3 rounded-lg md:rounded-xl font-bold text-[9px] md:text-[10px] hover:bg-indigo-700 active:scale-95 transition uppercase">Tambah 🛒</button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        window.removeWish = (id) => {
+            let list = Store.getWishlist().filter(x => x.id !== id);
+            Store.saveWishlist(list);
+            renderWishlist();
+            showToast("💔 Dihapus dari Wishlist");
+        };
+
+        window.toCart = (id) => {
+            const wishlist = Store.getWishlist();
+            const product = wishlist.find(x => x.id === id);
+            if (product) {
+                let cart = Store.getCart();
+                const exist = cart.find(x => x.id === id);
+                if(exist) exist.qty++; else cart.push({...product, qty: 1});
+                Store.saveCart(cart);
+                Store.saveWishlist(wishlist.filter(x => x.id !== id));
+                showToast("🛍️ Berhasil ditambah!");
+                renderWishlist();
+            }
+        };
+
+        window.toggleTheme = () => {
+            const isDark = document.documentElement.classList.toggle('dark');
+            localStorage.setItem('theme', isDark ? 'dark' : 'light');
+        };
+
+        function updateNav() {
+            document.getElementById('cart-count').innerText = Store.getCart().length;
+            const user = Store.getUser() || JSON.parse(localStorage.getItem('admin_session'));
+            const navAuth = document.getElementById('nav-auth');
+            if (user) {
+                const initial = user.name ? user.name.charAt(0).toUpperCase() : '?';
+                const logoutBtn = `<button onclick="logout()" title="Logout" style="background:none;border:none;cursor:pointer;padding:4px;display:flex;align-items:center;opacity:0.7;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg></button>`;
+                if (user.role === 'admin') {
+                    navAuth.innerHTML = `
+                        <div class="flex items-center gap-1.5">
+                            <span class="hidden md:inline" style="font-size:10px;font-weight:800;opacity:0.5;">Hi, ${user.name}</span>
+                            <span class="md:hidden w-6 h-6 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center font-black" style="font-size:10px;min-width:24px;">${initial}</span>
+                            <a href="admin/index.html" class="bg-indigo-600 text-white px-2 py-1 rounded-md font-black" style="font-size:9px;">Dashboard</a>
+                            ${logoutBtn}
+                        </div>`;
+                } else {
+                    navAuth.innerHTML = `
+                        <div class="flex items-center gap-1.5">
+                            <span class="hidden md:inline" style="font-size:10px;font-weight:800;opacity:0.5;">Hi, ${user.name}</span>
+                            <span class="md:hidden w-6 h-6 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center font-black" style="font-size:10px;min-width:24px;">${initial}</span>
+                            ${logoutBtn}
+                        </div>`;
+                }
+            } else {
+                navAuth.innerHTML = `<a href="login.html" class="bg-indigo-600 text-white px-2 py-1 rounded-md font-black" style="font-size:9px;">Login</a>`;
+            }
+        };
+        renderWishlist();
+    </script>
+
+    <div id="footer-placeholder"></div>
+
+<script>
+    // Fungsi panggil file footer eksternal
+    fetch('footer.html')
+        .then(response => response.text())
+        .then(data => {
+            document.getElementById('footer-placeholder').innerHTML = data;
+        });
+</script>
+
+</body>
+</html>

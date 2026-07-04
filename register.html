@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BagVerse | Daftar Akun</title>
+    <script>
+        (function() {
+            if (localStorage.getItem('theme') === 'dark') document.documentElement.classList.add('dark');
+        })();
+    </script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = { 
+            darkMode: 'class',
+            theme: { extend: { colors: { indigo: { 600: '#4f46e5' } } } }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap');
+        body { font-family: 'Plus Jakarta Sans', sans-serif; }
+        .toast-in { animation: slideIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+        @keyframes slideIn {
+            from { transform: translate(-50%, 20px); opacity: 0; }
+            to { transform: translate(-50%, 0); opacity: 1; }
+        }
+    </style>
+</head>
+<body class="bg-slate-50 dark:bg-slate-900 flex items-center justify-center min-h-screen p-4 transition-colors duration-300">
+    
+    <!-- Tombol Toggle Dark Mode -->
+    <button onclick="toggleTheme()" class="fixed top-4 right-4 p-2 bg-white dark:bg-gray-700 rounded-xl shadow-md text-sm z-50 transition hover:scale-110 active:scale-95" title="Ganti tema">🌓</button>
+
+    <div class="bg-white dark:bg-gray-800 p-6 md:p-10 rounded-[24px] md:rounded-[40px] shadow-xl w-full max-w-[360px] md:max-w-md border dark:border-gray-700 z-10">
+        <h1 class="text-2xl md:text-3xl font-black text-indigo-600 text-center mb-6 md:mb-8 italic tracking-tighter cursor-pointer" onclick="location.href='index.html'">BAGVERSE.</h1>
+        
+        <form id="reg-form" class="space-y-3 md:space-y-4">
+            <div>
+                <label class="text-[9px] md:text-[10px] font-black opacity-40 ml-2 uppercase tracking-widest dark:text-white">Nama Lengkap</label>
+                <input type="text" id="name" required placeholder="Dewi.." 
+                    class="w-full p-3 md:p-4 rounded-xl md:rounded-2xl bg-gray-50 dark:bg-gray-700 dark:text-white border-none outline-none focus:ring-2 focus:ring-indigo-500 transition text-sm">
+            </div>
+            <div>
+                <label class="text-[9px] md:text-[10px] font-black opacity-40 ml-2 uppercase tracking-widest dark:text-white">Email</label>
+                <input type="email" id="email" required placeholder="name@mail.com" 
+                    class="w-full p-3 md:p-4 rounded-xl md:rounded-2xl bg-gray-50 dark:bg-gray-700 dark:text-white border-none outline-none focus:ring-2 focus:ring-indigo-500 transition text-sm">
+            </div>
+            <div>
+                <label class="text-[9px] md:text-[10px] font-black opacity-40 ml-2 uppercase tracking-widest dark:text-white">Password (Min. 6 Karakter)</label>
+                <input type="password" id="password" minlength="6" required placeholder="••••••••" 
+                    class="w-full p-3 md:p-4 rounded-xl md:rounded-2xl bg-gray-50 dark:bg-gray-700 dark:text-white border-none outline-none focus:ring-2 focus:ring-indigo-500 transition text-sm">
+            </div>
+            
+            <div class="pt-2">
+                <button type="submit" id="btn-text" class="w-full bg-indigo-600 text-white py-3.5 md:py-4 rounded-xl md:rounded-2xl font-black uppercase tracking-widest hover:bg-indigo-700 transition active:scale-95 shadow-lg shadow-indigo-500/20 text-xs md:text-sm">
+                    Daftar Sekarang
+                </button>
+            </div>
+        </form>
+
+        <p class="text-center mt-6 text-[10px] md:text-xs font-bold opacity-50 dark:text-white">
+            Sudah punya akun? <a href="login.html" class="text-indigo-600 underline">Login</a>
+        </p>
+    </div>
+
+    <div id="custom-toast" class="fixed bottom-10 left-1/2 -translate-x-1/2 z-[100] hidden">
+        <div class="bg-black text-white px-6 py-3 rounded-2xl shadow-2xl font-bold text-xs flex items-center gap-3">
+            <span id="toast-icon">✨</span>
+            <span id="toast-msg">Pendaftaran Berhasil!</span>
+        </div>
+    </div>
+
+    <script>
+        function toggleTheme() {
+            const isDark = document.documentElement.classList.toggle('dark');
+            localStorage.setItem('theme', isDark ? 'dark' : 'light');
+        }
+    </script>
+
+    <script type="module">
+        import { Store } from './app.js';
+        const regForm = document.getElementById('reg-form');
+        const toast = document.getElementById('custom-toast');
+        const toastMsg = document.getElementById('toast-msg');
+
+        function showNotif(msg, isError = false) {
+            toastMsg.innerText = msg;
+            document.getElementById('toast-icon').innerText = isError ? '⚠️' : '✨';
+            toast.classList.remove('hidden');
+            toast.classList.add('toast-in');
+            const content = toast.firstElementChild;
+            if(isError) content.classList.replace('bg-black', 'bg-red-600');
+            else content.classList.replace('bg-red-600', 'bg-black');
+            setTimeout(() => toast.classList.add('hidden'), 2500);
+        }
+
+        regForm.onsubmit = async (e) => {
+            e.preventDefault();
+            const name = document.getElementById('name').value.trim();
+            const email = document.getElementById('email').value.trim();
+            const password = document.getElementById('password').value.trim();
+            const btnText = document.getElementById('btn-text');
+
+            if (password.length < 6) return showNotif('Password terlalu pendek (Min. 6)!', true);
+
+            btnText.innerText = 'MOHON TUNGGU...';
+            btnText.disabled = true;
+
+            // Coba register via API
+            const result = await Store.apiRegister(name, email, password);
+
+            if (result.ok && result.data.success) {
+                showNotif('Pendaftaran Berhasil! Silakan Login.');
+                setTimeout(() => window.location.href = 'login.html', 1800);
+            } else {
+                // Fallback localStorage
+                const users = JSON.parse(localStorage.getItem('users_db')) || [];
+                if (users.find(u => u.email === email)) {
+                    showNotif('Email sudah terdaftar!', true);
+                } else {
+                    users.push({ name, email, password, role: 'user', id: Date.now() });
+                    localStorage.setItem('users_db', JSON.stringify(users));
+                    showNotif('Pendaftaran Berhasil! Silakan Login.');
+                    setTimeout(() => window.location.href = 'login.html', 1800);
+                    return;
+                }
+                btnText.innerText = 'Daftar Sekarang';
+                btnText.disabled = false;
+            }
+        };
+    </script>
+</body>
+</html>
